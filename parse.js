@@ -4,62 +4,113 @@ const fs = require('fs');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
-const baseLink = 'https://www.mizrahi-tefahot.co.il/about-mizrahi-tefahot-he/career/open-jobs/';
+const dataForParsing = [
+    {
+        linkForParsing: 'https://www.ice.co.il/jobs',
+        numberOfElements: 3, //title, location, description ...id need something else
+        numberOfPages:0,
+        nameOfProperties: ['title','loaction','description'],
+        GetElem: (dom,ind,j)=>{
+            switch (true) {
+                case ind === 0:
+                    return dom.window.document.getElementsByClassName('details')[j].getElementsByClassName('title')[0].getElementsByTagName('a')[0].textContent
+                    break;
+                case ind === 1:
+                    return dom.window.document.getElementsByClassName('details')[j].getElementsByClassName('row body')[0].getElementsByClassName('col  col-lg-8')[0].getElementsByClassName('body-row')[1].textContent
+                    break;
+                case ind === 2:
+                    return dom.window.document.getElementsByClassName('details')[j].getElementsByClassName('positionDescription')[0].textContent
+                    break;
+            
+                default:
+                    return ''
+                    break;
+            }
 
+        },
+        GetNumbers: (dom)=>{
+            return dom.window.document.getElementsByClassName('details').length
+        }
+    },
+    // {
+    //     linkForParsing: 'https://www.mizrahi-tefahot.co.il/about-mizrahi-tefahot-he/career/open-jobs/',
+    //     numberOfElements: 5,
+    //     numberOfPages:0,
+    //     nameOfProperties: ['title','loaction','description','inform1','inform2'],
+    //     GetElem: (dom,ind,j)=>{
+    //         switch (true) {
+    //             case ind === 0:
+    //                 return dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[j].getElementsByTagName('h3')[0].textContent
+    //                 break;
+    //             case ind === 1:
+    //                 return dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[j].getElementsByClassName('jobMeta')[0].getElementsByClassName('location')[0].textContent
+    //                 break;
+    //             case ind === 2:
+    //                 return dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[j].getElementsByClassName('jobDescription')[0].textContent
+    //                 break;
+    //             case ind === 3:
+    //                 return dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[j].getElementsByClassName('jobMeta')[0].getElementsByClassName('type')[0].textContent
+    //                 break;
+    //             case ind === 4:
+    //                 return dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[j].getElementsByClassName('jobDetails collapse')[0].textContent
+    //                 break;
+            
+    //             default:
+    //                 return ''
+    //                 break;
+    //         }
 
-
+    //     },
+    //     GetNumbers: (dom)=>{
+    //         return dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem').length
+    //     }
+      
+    // },
+]
+let array = []
 const RemoveTags = (body) => {
     let regexp = /\n/g;
    return result = body.replace(regexp,'')
 }
-const RemoveTags2 = (body) => {
-    let regexp = /\n/g;
-    let str = body.replace('תיאור המשרה','').split('דרישות')
 
-    return result =[str[0].replace(regexp,''),str[1]]
+const Start = () => {
+    for (let i = 0; i < dataForParsing.length; i++) {
+         array[i] = Parsing(i)
+         console.log(array[i])
+    }
+   
     
-
 }
-function MainFunction() {
-    console.log('request for information via link: ' + baseLink +'\n');
-    axios.get(baseLink) //Here we send a GET request on the link
+const Parsing = (i) => {
+
+    //Preparation for work
+
+    console.log('request for information via link: ' + dataForParsing[i].linkForParsing +'\n');
+    axios.get(dataForParsing[i].linkForParsing) //Here we send a GET request on the link
         .then(response => {
             var currentPage = response.data; //Here we write result(all html code)
             const dom = new JSDOM(currentPage); //Сonnect the DOM module for more familiar work
+            const length = dataForParsing[i].GetNumbers(dom)
+            console.log(length)
 
-            const howMany = dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem').length
-
-            console.log(`We have ${howMany} vacancies\n`)
             let newJson = []
-            for (let i = 0; i < howMany; i++) {
-                newJson[i] = {}
-
-                let title = dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[i].getElementsByTagName('h3')[0].textContent
-                newJson[i].title = title
-
-                
-                let location = dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[i].getElementsByClassName('jobMeta')[0].getElementsByClassName('location')[0].textContent
-                newJson[i].location = location
-
-                
-                let atributes = dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[i].getElementsByClassName('jobMeta')[0].getElementsByClassName('type')[0].textContent
-                newJson[i].atributes = atributes
-
-                let description = dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[i].getElementsByClassName('jobDescription')[0].textContent
-                newJson[i].description = RemoveTags(description)
-             
-             
-                let description2 = dom.window.document.getElementsByClassName('container containerSmall')[1].getElementsByClassName('job filterItem')[i].getElementsByClassName('jobDetails collapse')[0].textContent
-                newJson[i].description2 = RemoveTags2(description2)
-                
-            
-            console.log(i)
-            console.log(newJson[i])
-            let str = JSON.stringify({newJson})
-               fs.writeFileSync('text.json',str)
+    
+    // Parsing start
+    
+            for (let j = 0; j < length; j++) {
+                newJson[j] = {}
+                for (let ind = 0; ind < dataForParsing[i].numberOfElements; ind++) {
+                    newJson[j][dataForParsing[i].nameOfProperties[ind]] = RemoveTags(dataForParsing[i].GetElem(dom,ind,j))
+                }
             }
+            console.log(newJson)
+            return newJson
+
         });
 };
-MainFunction()
-// let x = JSON.parse(fs.readFileSync('text.json'));
-// console.log(x.description2)
+Start()
+
+
+
+
+
